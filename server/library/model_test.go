@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// The MockModelDB object has a few parameters that the normal struct doesn't have - this allows us to spy on the calls made
+// to the fake db
 type MockModelDB struct {
 	Book
 	callParams []interface{}
