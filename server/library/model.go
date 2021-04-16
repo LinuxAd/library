@@ -9,6 +9,7 @@ import (
 )
 
 type Book struct {
+	ID          int
 	Author      string
 	Title       string
 	Description string
@@ -58,5 +59,11 @@ func (b *Book) checkDB(db SQLDB) error {
 }
 
 func (b *Book) addBook(db SQLDB) error {
+	err := db.QueryRow(
+		"INSERT INTO books(author, title, description, isbn) VALUES($1, $2, $3, current_timestamp, current_timestamp) RETURNING id",
+		b.Author, b.Title, b.Description, b.ISBN).Scan(&b.ID)
+	if err != nil {
+		return err
+	}
 	return nil
 }
