@@ -3,6 +3,7 @@ package library
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -33,6 +34,7 @@ type SQLDB interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
+	Begin() (*sql.Tx, error)
 	Ping() error
 }
 
@@ -59,9 +61,49 @@ func (b *Book) checkDB(db SQLDB) error {
 }
 
 func (b *Book) addBook(db SQLDB) error {
-	err := db.QueryRow(
-		"INSERT INTO books(author, title, description, isbn) VALUES($1, $2, $3, current_timestamp, current_timestamp) RETURNING id",
-		b.Author, b.Title, b.Description, b.ISBN).Scan(&b.ID)
+	tx, err := db.Begin()
+	if err != nil {
+		return nil
+	}
+
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.QueryRow(
+		"INSERT INTO books(author, title, description, isbn) VALUES($1, $2, $3, $4) RETURNING id",
+		b.Author, b.Title, b.Description, b.ISBN).Scan(&b.ID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *Book) removeBook(db SQLDB) error {
+	if b.ID == 0 {
+		return errors.New("cannot delete book with ID of 0")
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return nil
+	}
+
+	defer func() {
+		switch err {
+		case nil:
+			err = tx.Commit()
+		default:
+			tx.Rollback()
+		}
+	}()
+
+	_, err = tx.Exec(
+		"DELETE FROM books WHERE id=$1", b.ID)
 	if err != nil {
 		return err
 	}
