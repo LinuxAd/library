@@ -1,3 +1,7 @@
+// Package library is a vague first attempt at representing a library in go code.
+// it is obviously not ideal - as currently the only option for lending or returning
+// books is to delete them from the database and the recreate them, so there is no
+// way of tracking any of that.
 package library
 
 import (
